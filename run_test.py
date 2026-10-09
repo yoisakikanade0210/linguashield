@@ -48,6 +48,25 @@ CASES = [
     ("C4", "中文·学术诈骗（版面费催收）",
      "您的论文已被录用，请缴纳版面费 800 元至指定账户，过期作废。"
      "快速发表，保密处理。", "高危"),
+
+    # ---------- ★2026-10-02 新增：语盾·农信 农业国际合作场景 4 条 ----------
+    ("A1", "英文·农业BEC（冒充采购商改收款账户）",
+     "Dear Partner, following our agricultural cooperation agreement, we have changed "
+     "our bank account. Please remit the balance payment to the new beneficiary account "
+     "below and keep this confidential. Urgent transfer required.", "高危"),
+
+    ("A2", "英文·正常农业（真实单证往来，应放行）",
+     "Dear Partner, please find attached the proforma invoice and bill of lading for "
+     "our bulk order of fresh produce. Payment will be settled by letter of credit at "
+     "sight as per the contract.", "基本安全"),
+
+    ("A3", "中文·农业BEC（冒充合作方改账户）",
+     "张总您好，我方农业合作订单已确认。因公司账户调整，现变更收款账户，"
+     "请将尾款打款到以下账户，此事务必保密，抓紧时间办理。", "高危"),
+
+    ("A4", "中文·正常农业（正常供货往来，应放行）",
+     "您好，本批农产品出口所需的形式发票与提单已发送，请按即期信用证结算，"
+     "如有疑问请与我司外贸部联系，谢谢。", "基本安全"),
 ]
 
 
@@ -60,7 +79,7 @@ def run():
         lines.append(s)
 
     out("=" * 68)
-    out("  语盾 LinguaShield 原型 · 8 样本验证报告")
+    out("  语盾·农信 LinguaShield Agri 原型 · 12 样本验证报告")
     out("=" * 68)
 
     for cid, name, text, expect in CASES:
@@ -79,6 +98,11 @@ def run():
                 out(f"    · {x}")
         else:
             out("    （无异常信号）")
+        # ★2026-10-02 新增：核验辅助层输出（语盾·农信 的第二个卖点）
+        if r.get("verify"):
+            out("  核验建议：")
+            for v in r["verify"]:
+                out(f"    → {v}")
 
     out("")
     out("=" * 68)

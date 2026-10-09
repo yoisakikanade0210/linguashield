@@ -24,10 +24,12 @@
       - 你自己收的几十封正常英文邮件。
       替换后重跑，关键词倍数会更可信（方法完全不变）。
 """
-import csv, re, math
+import csv, re, math, os
 from collections import Counter
 
-CSV = r"C:\Users\10508\Desktop\语盾LinguaShield-项目材料\源码\samples.csv"
+# ★2026-10-02 修正：原为硬编码绝对路径，指向已改名的旧目录 `源码`，
+#   换机器 / 改名后必崩。改为按脚本自身位置定位，跨机器可用。
+CSV = os.path.join(os.path.dirname(os.path.abspath(__file__)), "samples.csv")
 
 # ---------- 1. 读样本，分出 英文钓鱼 / 英文正常 ----------
 phish_en, normal_en = [], []

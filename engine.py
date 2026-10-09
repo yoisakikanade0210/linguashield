@@ -23,6 +23,9 @@ import re
 from rules import (
     EN_PHRASES, ZH_PHRASES, COMBO_RULES, WEIGHTS, GROUP_BASE,
     SHORTENERS, SUSPICIOUS_TLDS, BRAND_KEYWORDS, TRUSTED_DOMAINS,
+    # ★2026-10-02 新增（语盾·农信 转向）
+    AGRI_TRUSTED_DOMAINS, SECOND_CHANNEL_TRIGGERS,
+    EMAIL_AUTH_CHECKS, AGRI_VERIFY_CHECKLIST, HOMOGLYPH_MAP,
 )
 
 # ------------------------------------------------------------
@@ -97,7 +100,10 @@ def check_urls(text):
         low = url.lower()
 
         # (1) 白名单：可信域名直接放行，避免误伤（比如学校官网链接）
+        #     2026-10-02 扩展：农业国际合作场景涉及的合法机构域名一并放行
         if any(trusted in low for trusted in TRUSTED_DOMAINS):
+            continue
+        if any(trusted in low for trusted in AGRI_TRUSTED_DOMAINS):
             continue
 
         # ★关键修复：先提取"主机名(host)"再做判断
@@ -192,7 +198,115 @@ def match_combos(matched_groups):
 
 
 # ------------------------------------------------------------
-# 6. 主函数：汇总加权，输出可读结论
+# 6. 核验辅助层（★2026-10-02 新增，语盾·农信 的核心增量）
+# ------------------------------------------------------------
+# 与"打分报警"不同，这一层不参与评分，只负责回答一个问题：
+#     "这封邮件我该**怎么核实**？"
+# 设计立场：本系统做"风险提示 + 核验引导"，不代替人工判断、不下结论。
+# 依据：FBI AA22-340A 建议任何账户变更都必须通过**独立的第二渠道**核实。
+
+def extract_domain(url):
+    """
+    从 URL 中提取主机名。用于"域名真伪比对"。
+    例：http://micr0soft-secure.tk/login  →  micr0soft-secure.tk
+    """
+    m = re.search(r"https?://([^/\s:]+)", url.lower())
+    if m:
+        return m.group(1)
+    return url.lower().split("/")[0].split(":")[0]
+
+
+def domain_looks_spoofed(host):
+    """
+    域名形近字检测：把 0→o、1→l、rn→m 等还原后，
+    看是否"还原前不像正经域名，还原后反而像品牌/机构名"。
+    返回 (是否可疑, 说明文字)。
+
+    例：micr0soft-secure.tk → microsoft-secure.tk（含 microsoft）
+      → 可疑：数字 0 被用来冒充字母 o
+    """
+    # 标准品牌/机构清单（小写），用于比对
+    known = [
+        "microsoft", "paypal", "apple", "google", "amazon",
+        "alibaba", "sinosure", "fao", "usda", "customs",
+    ]
+    # 生成该域名的"去混淆"版本
+    deobf = host
+    for fake, real in HOMOGLYPH_MAP.items():
+        deobf = deobf.replace(fake, real)
+
+    if deobf == host:
+        return False, ""     # 没有用到形近字替换技巧
+
+    for name in known:
+        if name in deobf and name not in host:
+            detail = "、".join(f"{k}→{v}" for k, v in HOMOGLYPH_MAP.items() if k in host)
+            return True, f"域名 {host} 疑似用形近字替换冒充「{name}」（{detail}）"
+    return False, ""
+
+
+def verify_checklist(text, clean, urls, matched_groups, score):
+    """
+    生成"核验建议清单"。返回 (核验项列表, 涉及的域名列表)。
+
+    三条触发线（任一命中就给建议，不是只有高分才给）：
+      A. 命中"账户/汇款"类词 → 第二渠道核实（这是 BEC 的铁律）
+      B. 邮件里有 URL → 域名真伪比对 + 形近字检测
+      C. 涉农/外贸场景（无论分数） → 固定核验清单（防漏报压舱石）
+    """
+    low = clean.lower()
+    tips = []
+    domains = []
+
+    # ---- A. 账户变更 → 第二渠道核验 ----
+    hit_trigger = [t for t in SECOND_CHANNEL_TRIGGERS
+                   if (t.lower() in low)]
+    if hit_trigger:
+        tips.append(
+            "【账户变更·必须第二渠道核实】本邮件出现账户/汇款相关表述"
+            f"（{'、'.join(hit_trigger[:3])}）。"
+            "任何收款账户变更，都必须用**合同上原留存的**电话或当面核实，"
+            "绝不要使用本邮件里提供的新号码/新联系人。"
+        )
+        tips.extend(EMAIL_AUTH_CHECKS)
+
+    # ---- B. URL → 域名真伪比对 ----
+    for url in urls:
+        host = extract_domain(url)
+        domains.append(host)
+        spoofed, detail = domain_looks_spoofed(host)
+        if spoofed:
+            tips.append(f"【域名疑似仿冒】{detail}")
+        else:
+            tips.append(
+                f"【域名比对】链接真实域名是「{host}」，"
+                "请与对方公司官网公布的域名逐字比对（注意 0/o、1/l、rn/m 之类替换）。"
+            )
+
+    # ---- C. 涉农/外贸场景 → 固定核验清单 ----
+    agri_groups = {
+        "商务异常（BEC Core）", "农业外贸场景（Agri Trade）",
+        "外贸金融异常（Trade Finance Anomaly）",
+        "涉农场景（中性词）", "外贸结算（Trade Settlement）",
+        "账户变更（Account Change）",
+    }
+    if matched_groups & agri_groups:
+        tips.append("【农业国际合作场景·标准核验清单】")
+        tips.extend(AGRI_VERIFY_CHECKLIST)
+
+    # 去掉重复项，保持顺序
+    seen = set()
+    uniq = []
+    for t in tips:
+        if t not in seen:
+            seen.add(t)
+            uniq.append(t)
+
+    return uniq, domains
+
+
+# ------------------------------------------------------------
+# 7. 主函数：汇总加权，输出可读结论
 # ------------------------------------------------------------
 def analyze(text):
     """
@@ -205,6 +319,8 @@ def analyze(text):
       level         风险等级文字
       reasons       可读的判定理由列表（可解释）
       urls          文本中提取到的所有 URL
+      verify        核验建议清单（★2026-10-02 新增，语盾·农信）
+      domains       涉及的域名（用于人工比对）
     """
     # Step 1: 归一化（处理规避字符）
     clean = normalize(text)
@@ -225,6 +341,9 @@ def analyze(text):
     )
     score = min(int(weighted), 100)   # 封顶 100 分
 
+    # Step 5: 核验辅助层（不参与打分，只给"怎么核实"的建议）
+    verify, domains = verify_checklist(text, clean, urls, matched, score)
+
     return {
         "lang": lang,
         "raw_score": int(phrase_score + combo_score + url_score),
@@ -232,6 +351,8 @@ def analyze(text):
         "level": level_text(score),
         "reasons": phrase_reasons + combo_reasons + url_reasons,
         "urls": urls,
+        "verify": verify,
+        "domains": domains,
     }
 
 
@@ -252,10 +373,10 @@ def level_text(score):
 # ------------------------------------------------------------
 if __name__ == "__main__":
     print("=" * 55)
-    print("  语盾 LinguaShield —— 中英双语钓鱼检测（命令行版）")
+    print("  语盾·农信 LinguaShield Agri —— 双语风险识别与核验辅助")
     print("=" * 55)
     while True:
-        user_input = input("\n请输入待检测文本（输入 q 退出）：\n> ")
+        user_input = input("\n请输入待检测邮件正文（输入 q 退出）：\n> ")
         if user_input.lower() == "q":
             print("再见！")
             break
@@ -269,4 +390,8 @@ if __name__ == "__main__":
         print("判定理由：")
         for r in result["reasons"]:
             print(f"  · {r}")
+        if result["verify"]:
+            print("核验建议：")
+            for v in result["verify"]:
+                print(f"  → {v}")
         print("-" * 55)

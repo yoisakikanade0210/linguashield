@@ -83,7 +83,7 @@ def evaluate(tier, samples):
 def main():
     samples = load_samples()
     print("=" * 78)
-    print("  语盾 LinguaShield · 三档消融实验（报警阈值 = 分数 ≥ 40）")
+    print("  语盾·农信 LinguaShield Agri · 三档消融实验（报警阈值 = 分数 ≥ 40）")
     print("=" * 78)
     print(f"  样本总数：{len(samples)}（真实钓鱼 {sum(1 for r in samples if r['is_phish']=='1')} 条）\n")
 

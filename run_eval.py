@@ -118,10 +118,11 @@ def main():
     fpr = safe_div(fp, fp + tn)                      # 正常邮件被误报的比例
 
     out("=" * 70)
-    out("  语盾 LinguaShield · 测试集评测报告")
+    out("  语盾·农信 LinguaShield Agri · 测试集评测报告")
     out("=" * 70)
     out(f"  样本总数：{total}")
     out(f"    其中钓鱼样本 {tp + fn} 条，正常邮件 {fp + tn} 条（自建测试集，见 source 字段）")
+    out("    场景覆盖：校园通知 / 学术诈骗 / 农业国际合作（BEC）")
     out("")
     out("  【混淆矩阵】")
     out(f"    抓对钓鱼(TP) = {tp}     漏报(FN) = {fn}")
