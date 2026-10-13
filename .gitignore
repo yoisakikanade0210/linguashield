@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+
+# 参照语料数据集（约 5MB），不入库；下载方式见 README
+corpus_raw/

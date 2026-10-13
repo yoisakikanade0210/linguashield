@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>语盾·农信 LinguaShield Agri · 界面原型（静态演示）</title>
+<style>
+  *{box-sizing:border-box;}
+  body{margin:0;background:#eef2f7;color:#1f2328;
+    font-family:-apple-system,"PingFang SC","Microsoft YaHei","Segoe UI",sans-serif;
+    line-height:1.7;font-size:14.5px;}
+  .top{background:linear-gradient(120deg,#0f3d2e,#1d6b4a);color:#fff;padding:20px 30px;}
+  .top h1{margin:0;font-size:21px;font-weight:600;letter-spacing:.5px;}
+  .top p{margin:5px 0 0;font-size:13px;opacity:.85;}
+  .wrap{max-width:1080px;margin:22px auto;padding:0 18px;display:flex;gap:18px;align-items:flex-start;}
+  .left{flex:0 0 38%;}
+  .right{flex:1;min-width:0;}
+  .panel{background:#fff;border:1px solid #e2e8f0;border-radius:12px;overflow:hidden;}
+  .panel .hd{background:#f1f5f9;padding:11px 15px;font-weight:600;font-size:13.5px;
+    border-bottom:1px solid #e2e8f0;color:#334155;}
+  .sample{padding:12px 15px;border-bottom:1px solid #f1f5f9;cursor:pointer;transition:.15s;}
+  .sample:last-child{border-bottom:none;}
+  .sample:hover{background:#f8fafc;}
+  .sample.active{background:#ecfdf5;border-left:4px solid #10b981;}
+  .sample .nm{font-size:13px;font-weight:600;color:#0f172a;display:flex;justify-content:space-between;align-items:center;}
+  .sample .tag{font-size:11px;padding:1px 8px;border-radius:10px;font-weight:600;}
+  .tag.p{background:#fee2e2;color:#b91c1c;}
+  .tag.n{background:#dcfce7;color:#166534;}
+  .sample .prev{font-size:12px;color:#64748b;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .io{padding:14px 15px;}
+  .io textarea{width:100%;height:92px;border:1px solid #cbd5e1;border-radius:8px;
+    padding:9px 11px;font-family:inherit;font-size:13px;resize:none;color:#334155;}
+  .io .hint{font-size:11.5px;color:#94a3b8;margin-top:6px;}
+  .card{padding:18px 20px;}
+  .lvl{display:inline-block;padding:3px 13px;border-radius:20px;font-weight:600;font-size:13.5px;}
+  .lvl.danger{background:#fee2e2;color:#b91c1c;}
+  .lvl.warn{background:#fef3c7;color:#b45309;}
+  .lvl.low{background:#e0f2fe;color:#0369a1;}
+  .lvl.safe{background:#dcfce7;color:#166534;}
+  .gauge{display:flex;align-items:baseline;gap:10px;margin:10px 0 4px;}
+  .gauge .num{font-size:42px;font-weight:700;color:#0f172a;}
+  .gauge .of{color:#94a3b8;font-size:15px;}
+  .bar{height:9px;background:#eef2f7;border-radius:6px;overflow:hidden;margin:4px 0 14px;}
+  .bar i{display:block;height:100%;border-radius:6px;}
+  .sec{margin-top:16px;}
+  .sec h4{margin:0 0 8px;font-size:13.5px;color:#475569;font-weight:600;
+    border-left:3px solid #10b981;padding-left:9px;}
+  .reason{background:#fffaf0;border:1px solid #fde9c8;border-radius:7px;padding:8px 11px;
+    margin-bottom:7px;font-size:13px;color:#7c2d12;}
+  .vrf{background:#f0f9ff;border:1px solid #cce8f5;border-radius:7px;padding:8px 11px;
+    margin-bottom:7px;font-size:12.5px;color:#0c4a6e;line-height:1.65;}
+  .empty{color:#94a3b8;text-align:center;padding:60px 20px;font-size:14px;}
+  .foot{max-width:1080px;margin:6px auto 40px;padding:0 18px;color:#94a3b8;font-size:11.5px;line-height:1.7;}
+  .muted{color:#64748b;}
+</style>
+</head>
+<body>
+<div class="top">
+  <h1>语盾·农信 · LinguaShield Agri</h1>
+  <p>农业国际合作邮件 · 风险识别与核验辅助系统　|　界面原型（静态演示）</p>
+</div>
+
+<div class="wrap">
+  <div class="left">
+    <div class="panel">
+      <div class="hd">示例邮件（点击查看判定）</div>
+      <div id="list"></div>
+    </div>
+    <div class="panel" style="margin-top:14px;">
+      <div class="hd">输入区（实时版接口示意）</div>
+      <div class="io">
+        <textarea placeholder="将邮件全文粘贴到这里…（实时版由 engine.py 驱动）"></textarea>
+        <div class="hint">本静态页仅展示下方 5 封「由真实引擎计算后固化」的示例。现场实时演示请运行 <code>python run_test.py</code>。</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="right">
+    <div class="panel">
+      <div class="hd">风险判定结果</div>
+      <div id="out">
+        <div class="empty">← 从左侧选择一封邮件查看详情</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="foot">
+  本界面原型为挑战杯 B 类项目「语盾·农信」的展示层。页面中的判定分数、等级、理由与核验清单，
+  均由 <code>源码_666/engine.py</code> 的 <code>analyze()</code> 函数真实计算后固化，非手工编造。
+  实时运行版本调用同一引擎，逻辑完全一致。设计立场：本系统做「风险提示 + 核验引导」，不代替人工判断。
+</div>
+
+<script>
+const DATA = [
+ {
+  "name": "英文·农业BEC·账户变更",
+  "kind": "phish",
+  "score": 60,
+  "level": "可疑（建议谨慎核实）",
+  "lang": "en",
+  "reasons": [
+   "命中商务异常（BEC Core）话术：「keep this confidential」(+15)",
+   "组合告警：同时出现收款账户变更与保密要求，BEC 典型特征（改账户+保密）"
+  ],
+  "verify": [
+   "【账户变更·必须第二渠道核实】本邮件出现账户/汇款相关表述（bank details）。任何收款账户变更，都必须用**合同上原留存的**电话或当面核实，绝不要使用本邮件里提供的新号码/新联系人。",
+   "查看邮件「显示原始邮件/查看邮件头」，确认 Return-Path 域名与发件人域名一致",
+   "核对邮件头 Authentication-Results 字段：spf=pass、dkim=pass、dmarc=pass",
+   "若三者任一为 fail 或缺失，该邮件发件人身份不可信，须另渠道确认",
+   "【农业国际合作场景·标准核验清单】",
+   "收款账户变更：只通过**原有合同上留存的**电话/传真核实，不用邮件里的新号码",
+   "对方身份：核对发件邮箱域名是否为对方公司**官网公布的**域名（注意形近字替换）",
+   "订单真实性：大额/紧急订单先与业务经办人电话确认，再谈付款",
+   "系统安全：涉及付款的电脑安装杀毒软件，开启邮件双因素认证（2FA）",
+   "发现异常：立即联系开户银行冻结汇款，并到当地公安机关报案"
+  ],
+  "text": "Dear client, due to system upgrade our bank details have changed. Please update your records and transfer the remaining balance to our new designated account via telegraphic transfer. Keep this confidential."
+ },
+ {
+  "name": "中文·农业BEC·预付保证金",
+  "kind": "phish",
+  "score": 100,
+  "level": "高危（强烈疑似钓鱼）",
+  "lang": "zh",
+  "reasons": [
+   "命中金钱相关（Financial）话术：「保证金」(+12)",
+   "命中话术掩饰（Secrecy）话术：「请勿外传」(+12)",
+   "命中外贸结算（Trade Settlement）话术：「预付」(+8)",
+   "命中账户变更（Account Change）话术：「新账户」(+15)",
+   "组合告警：涉及金钱且要求保密，典型诈骗话术",
+   "组合告警：结算过程中要求变更收款账户，典型冒充采购商诈骗",
+   "组合告警：收款账户变更并同期要求付款或缴费，BEC 三件套的核心环节",
+   "组合告警：变更收款账户并要求保密，典型冒充采购商 BEC 三件套"
+  ],
+  "verify": [
+   "【农业国际合作场景·标准核验清单】",
+   "收款账户变更：只通过**原有合同上留存的**电话/传真核实，不用邮件里的新号码",
+   "对方身份：核对发件邮箱域名是否为对方公司**官网公布的**域名（注意形近字替换）",
+   "订单真实性：大额/紧急订单先与业务经办人电话确认，再谈付款",
+   "系统安全：涉及付款的电脑安装杀毒软件，开启邮件双因素认证（2FA）",
+   "发现异常：立即联系开户银行冻结汇款，并到当地公安机关报案"
+  ],
+  "text": "您好，因展位紧张需预付保证金锁定名额，请于今日下班前将款项汇入以下新账户，此事请勿外传。"
+ },
+ {
+  "name": "英文·正常农业·单证结算",
+  "kind": "normal",
+  "score": 0,
+  "level": "基本安全",
+  "lang": "en",
+  "reasons": [],
+  "verify": [],
+  "text": "Please find attached the commercial invoice and packing list for PO 44821. The shipment will depart from Qingdao on Oct 18 as scheduled. Let us know if the documents are in order."
+ },
+ {
+  "name": "中文·正常农业·询盘报价",
+  "kind": "normal",
+  "score": 0,
+  "level": "基本安全",
+  "lang": "zh",
+  "reasons": [],
+  "verify": [],
+  "text": "贵司您好，我方对贵司展出的茶园机械感兴趣，请提供 CIF 胡志明报价及最小起订量，方便我方评估。"
+ },
+ {
+  "name": "英文·农业BEC·冒充高管",
+  "kind": "phish",
+  "score": 54,
+  "level": "可疑（建议谨慎核实）",
+  "lang": "en",
+  "reasons": [
+   "命中紧急施压（Urgency）话术：「urgent」(+8)",
+   "命中费用索取（Fee Demand）话术：「usd」(+10)",
+   "组合告警：费用索取配合紧急催促，疑似掠夺性收费/中奖诈骗(补抓 S018)"
+  ],
+  "verify": [],
+  "text": "Hi, it is the CEO. We are acquiring a supplier and must keep it quiet. Urgently wire USD 80,000 to the account my assistant sends. Do not tell finance."
+ }
+ }
+];
+
+function levelClass(s){ return s>=70?'danger':s>=40?'warn':s>=15?'low':'safe'; }
+
+function render(i){
+  const d = DATA[i];
+  const lc = levelClass(d.score);
+  const color = d.score>=70?'#dc2626':d.score>=40?'#d97706':d.score>=15?'#0284c7':'#16a34a';
+  let reasons = d.reasons.length
+    ? d.reasons.map(r=>`<div class="reason">${r}</div>`).join('')
+    : `<div class="muted" style="font-size:13px;">未命中任何可疑话术。</div>`;
+  let vrf = d.verify.length
+    ? d.verify.map(v=>`<div class="vrf">${v}</div>`).join('')
+    : `<div class="muted" style="font-size:13px;">无需额外核验，按常规流程处理。</div>`;
+  document.getElementById('out').innerHTML = `
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <span class="lvl ${lc}">${d.level}</span>
+        <span class="muted" style="font-size:12px;">语种：${d.lang==='zh'?'中文':'英文'} · 样本：${d.name}</span>
+      </div>
+      <div class="gauge"><span class="num" style="color:${color}">${d.score}</span><span class="of">/ 100 分</span></div>
+      <div class="bar"><i style="width:${d.score}%;background:${color}"></i></div>
+      <div class="sec">
+        <h4>原文</h4>
+        <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px 12px;font-size:13px;color:#334155;white-space:pre-wrap;">${d.text}</div>
+      </div>
+      <div class="sec">
+        <h4>判定理由（可解释）</h4>
+        ${reasons}
+      </div>
+      <div class="sec">
+        <h4>核验辅助清单（怎么核实）</h4>
+        ${vrf}
+      </div>
+    </div>`;
+  document.querySelectorAll('.sample').forEach((el,idx)=>el.classList.toggle('active',idx===i));
+}
+
+function build(){
+  const list = document.getElementById('list');
+  list.innerHTML = DATA.map((d,i)=>`
+    <div class="sample" onclick="render(${i})">
+      <div class="nm"><span>${d.name}</span><span class="tag ${d.kind==='phish'?'p':'n'}">${d.kind==='phish'?'钓鱼':'正常'}</span></div>
+      <div class="prev">${d.text}</div>
+    </div>`).join('');
+  render(0);
+}
+build();
+</script>
+</body>
+</html>
